@@ -32,7 +32,6 @@ public sealed class SalesApiTests
         using var createdDocument = await ReadDocument(createResponse);
         var createdSale = createdDocument.RootElement.GetProperty("data");
         var saleId = createdSale.GetProperty("id").GetGuid();
-        var itemId = createdSale.GetProperty("items")[0].GetProperty("id").GetGuid();
         createdSale.GetProperty("totalAmount").GetDecimal().Should().Be(360m);
         createdSale.GetProperty("items")[0]
             .GetProperty("discountPercentage").GetDecimal().Should().Be(0.10m);
@@ -47,6 +46,20 @@ public sealed class SalesApiTests
         listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         using var listDocument = await ReadDocument(listResponse);
         listDocument.RootElement.GetProperty("totalCount").GetInt32().Should().Be(1);
+
+        // When - update and recalculate
+        var updateResponse = await _client.PutAsJsonAsync(
+            $"/api/sales/{saleId}",
+            CreateRequest(productId, quantity: 10));
+
+        // Then
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var updatedDocument = await ReadDocument(updateResponse);
+        var updatedSale = updatedDocument.RootElement.GetProperty("data");
+        var itemId = updatedSale.GetProperty("items")[0].GetProperty("id").GetGuid();
+        updatedSale.GetProperty("totalAmount").GetDecimal().Should().Be(800m);
+        updatedSale.GetProperty("items")[0]
+            .GetProperty("discountPercentage").GetDecimal().Should().Be(0.20m);
 
         // When - cancel item
         var cancelResponse = await _client.PatchAsync(
