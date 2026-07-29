@@ -1,6 +1,66 @@
-@Ambev.DeveloperEvaluation.WebApi_HostAddress = http://localhost:5119
+@host = http://localhost:8080
+@saleId = 00000000-0000-0000-0000-000000000000
+@itemId = 00000000-0000-0000-0000-000000000000
 
-GET {{Ambev.DeveloperEvaluation.WebApi_HostAddress}}/weatherforecast/
+### Health
+GET {{host}}/health
 Accept: application/json
 
-###
+### Create sale
+POST {{host}}/api/sales
+Content-Type: application/json
+
+{
+  "saleNumber": "SALE-2026-0001",
+  "date": "2026-07-29T15:00:00Z",
+  "customerId": "11111111-1111-1111-1111-111111111111",
+  "customerName": "Example Customer",
+  "branchId": "22222222-2222-2222-2222-222222222222",
+  "branchName": "São Paulo Branch",
+  "items": [
+    {
+      "productId": "33333333-3333-3333-3333-333333333333",
+      "productName": "Example Product",
+      "quantity": 10,
+      "unitPrice": 15.90
+    }
+  ]
+}
+
+### Get sale
+GET {{host}}/api/sales/{{saleId}}
+Accept: application/json
+
+### List, filter and order sales
+GET {{host}}/api/sales?_page=1&_size=10&_order=date%20desc&customerName=*Customer*
+Accept: application/json
+
+### Update sale
+PUT {{host}}/api/sales/{{saleId}}
+Content-Type: application/json
+
+{
+  "saleNumber": "SALE-2026-0001",
+  "date": "2026-07-29T15:00:00Z",
+  "customerId": "11111111-1111-1111-1111-111111111111",
+  "customerName": "Updated Customer",
+  "branchId": "22222222-2222-2222-2222-222222222222",
+  "branchName": "São Paulo Branch",
+  "items": [
+    {
+      "productId": "33333333-3333-3333-3333-333333333333",
+      "productName": "Example Product",
+      "quantity": 4,
+      "unitPrice": 15.90
+    }
+  ]
+}
+
+### Cancel one item
+PATCH {{host}}/api/sales/{{saleId}}/items/{{itemId}}/cancel
+
+### Cancel sale
+PATCH {{host}}/api/sales/{{saleId}}/cancel
+
+### Delete sale
+DELETE {{host}}/api/sales/{{saleId}}
