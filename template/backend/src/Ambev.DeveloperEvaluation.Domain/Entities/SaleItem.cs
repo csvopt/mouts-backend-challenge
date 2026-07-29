@@ -29,22 +29,7 @@ public class SaleItem : BaseEntity
         int quantity,
         decimal unitPrice)
     {
-        if (productId == Guid.Empty)
-            throw new DomainException("Product identifier is required.");
-
-        if (string.IsNullOrWhiteSpace(productName))
-            throw new DomainException("Product name is required.");
-
-        if (quantity <= 0)
-            throw new DomainException("Product quantity must be greater than zero.");
-
-        if (quantity > 20)
-            throw new DomainException("It is not possible to sell more than 20 identical items.");
-
-        if (unitPrice <= 0)
-            throw new DomainException("Unit price must be greater than zero.");
-
-        var discountPercentage = CalculateDiscount(quantity);
+        Validate(productId, productName, quantity, unitPrice);
 
         return new SaleItem
         {
@@ -54,12 +39,20 @@ public class SaleItem : BaseEntity
             ProductName = productName.Trim(),
             Quantity = quantity,
             UnitPrice = unitPrice,
-            DiscountPercentage = discountPercentage,
-            TotalAmount = decimal.Round(
-                quantity * unitPrice * (1 - discountPercentage),
-                2,
-                MidpointRounding.AwayFromZero)
+            DiscountPercentage = CalculateDiscount(quantity),
+            TotalAmount = CalculateTotal(quantity, unitPrice)
         };
+    }
+
+    internal void Update(string productName, int quantity, decimal unitPrice)
+    {
+        Validate(ProductId, productName, quantity, unitPrice);
+
+        ProductName = productName.Trim();
+        Quantity = quantity;
+        UnitPrice = unitPrice;
+        DiscountPercentage = CalculateDiscount(quantity);
+        TotalAmount = CalculateTotal(quantity, unitPrice);
     }
 
     public void Cancel()
@@ -79,5 +72,35 @@ public class SaleItem : BaseEntity
             >= 4 => 0.10m,
             _ => 0m
         };
+    }
+
+    private static decimal CalculateTotal(int quantity, decimal unitPrice)
+    {
+        return decimal.Round(
+            quantity * unitPrice * (1 - CalculateDiscount(quantity)),
+            2,
+            MidpointRounding.AwayFromZero);
+    }
+
+    private static void Validate(
+        Guid productId,
+        string productName,
+        int quantity,
+        decimal unitPrice)
+    {
+        if (productId == Guid.Empty)
+            throw new DomainException("Product identifier is required.");
+
+        if (string.IsNullOrWhiteSpace(productName))
+            throw new DomainException("Product name is required.");
+
+        if (quantity <= 0)
+            throw new DomainException("Product quantity must be greater than zero.");
+
+        if (quantity > 20)
+            throw new DomainException("It is not possible to sell more than 20 identical items.");
+
+        if (unitPrice <= 0)
+            throw new DomainException("Unit price must be greater than zero.");
     }
 }

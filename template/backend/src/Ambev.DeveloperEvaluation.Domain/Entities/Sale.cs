@@ -94,9 +94,19 @@ public class Sale : BaseEntity
         if (duplicatedProduct is not null)
             throw new DomainException($"Product {duplicatedProduct.Key} cannot be repeated in the same sale.");
 
-        _items.Clear();
+        _items.RemoveAll(currentItem =>
+            replacementItems.All(item => item.ProductId != currentItem.ProductId));
+
         foreach (var item in replacementItems)
-            _items.Add(SaleItem.Create(Id, item.ProductId, item.ProductName, item.Quantity, item.UnitPrice));
+        {
+            var currentItem = _items.FirstOrDefault(existingItem =>
+                existingItem.ProductId == item.ProductId);
+
+            if (currentItem is null)
+                _items.Add(SaleItem.Create(Id, item.ProductId, item.ProductName, item.Quantity, item.UnitPrice));
+            else
+                currentItem.Update(item.ProductName, item.Quantity, item.UnitPrice);
+        }
 
         RecalculateTotal();
     }

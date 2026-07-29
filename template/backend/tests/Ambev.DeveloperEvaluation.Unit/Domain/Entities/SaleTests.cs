@@ -132,4 +132,27 @@ public class SaleTests
         act.Should().Throw<DomainException>()
             .WithMessage("*cannot be repeated*");
     }
+
+    [Fact(DisplayName = "Given an existing product When replacing items Then preserves identity and recalculates it")]
+    public void ReplaceItems_ExistingProduct_PreservesIdentityAndRecalculates()
+    {
+        // Given
+        var sale = SaleTestData.CreateSale();
+        var item = SaleTestData.AddItem(sale, quantity: 4, unitPrice: 100m);
+        var originalItemId = item.Id;
+
+        // When
+        sale.ReplaceItems(
+        [
+            new SaleItemData(item.ProductId, "Updated Product", 10, 100m)
+        ]);
+
+        // Then
+        var updatedItem = sale.Items.Single();
+        updatedItem.Id.Should().Be(originalItemId);
+        updatedItem.ProductName.Should().Be("Updated Product");
+        updatedItem.DiscountPercentage.Should().Be(0.20m);
+        updatedItem.TotalAmount.Should().Be(800m);
+        sale.TotalAmount.Should().Be(800m);
+    }
 }
