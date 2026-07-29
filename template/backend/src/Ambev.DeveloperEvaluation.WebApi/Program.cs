@@ -76,7 +76,10 @@ public class Program
             using (var scope = app.Services.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<DefaultContext>();
-                context.Database.Migrate();
+                if (context.Database.IsRelational())
+                    context.Database.Migrate();
+                else
+                    context.Database.EnsureCreated();
             }
 
             app.Run();
