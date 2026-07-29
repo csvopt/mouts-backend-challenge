@@ -113,8 +113,18 @@ public class SaleRepository : ISaleRepository
         if (!value.Contains('*'))
             return query.Where(BuildEqualityExpression(property, value));
 
-        var pattern = value.Replace('*', '%');
-        return query.Where(BuildLikeExpression(property, pattern));
+        var startsWithWildcard = value.StartsWith('*');
+        var endsWithWildcard = value.EndsWith('*');
+        var searchValue = value.Trim('*');
+
+        var methodName = (startsWithWildcard, endsWithWildcard) switch
+        {
+            (true, true) => nameof(string.Contains),
+            (true, false) => nameof(string.EndsWith),
+            _ => nameof(string.StartsWith)
+        };
+
+        return query.Where(BuildStringMethodExpression(property, methodName, searchValue));
     }
 
     private static Expression<Func<Sale, bool>> BuildEqualityExpression(
@@ -125,22 +135,18 @@ public class SaleRepository : ISaleRepository
         return Expression.Lambda<Func<Sale, bool>>(equals, property.Parameters);
     }
 
-    private static Expression<Func<Sale, bool>> BuildLikeExpression(
+    private static Expression<Func<Sale, bool>> BuildStringMethodExpression(
         Expression<Func<Sale, string>> property,
-        string pattern)
+        string methodName,
+        string value)
     {
-        var functions = Expression.Property(null, typeof(EF), nameof(EF.Functions));
-        var ilikeMethod = typeof(NpgsqlDbFunctionsExtensions)
-            .GetMethod(
-                nameof(NpgsqlDbFunctionsExtensions.ILike),
-                [typeof(DbFunctions), typeof(string), typeof(string)])!;
-        var ilike = Expression.Call(
-            ilikeMethod,
-            functions,
+        var stringMethod = typeof(string).GetMethod(methodName, [typeof(string)])!;
+        var methodCall = Expression.Call(
             property.Body,
-            Expression.Constant(pattern));
+            stringMethod,
+            Expression.Constant(value));
 
-        return Expression.Lambda<Func<Sale, bool>>(ilike, property.Parameters);
+        return Expression.Lambda<Func<Sale, bool>>(methodCall, property.Parameters);
     }
 
     private static IQueryable<Sale> ApplyOrdering(IQueryable<Sale> query, string? order)
