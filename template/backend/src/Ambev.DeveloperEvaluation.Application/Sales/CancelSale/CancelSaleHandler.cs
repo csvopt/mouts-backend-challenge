@@ -1,4 +1,6 @@
+using Ambev.DeveloperEvaluation.Application.Common.Messaging;
 using Ambev.DeveloperEvaluation.Application.Sales.Common;
+using Ambev.DeveloperEvaluation.Domain.Events;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using AutoMapper;
 using MediatR;
@@ -9,11 +11,16 @@ public sealed class CancelSaleHandler : IRequestHandler<CancelSaleCommand, SaleR
 {
     private readonly ISaleRepository _saleRepository;
     private readonly IMapper _mapper;
+    private readonly IEventPublisher _eventPublisher;
 
-    public CancelSaleHandler(ISaleRepository saleRepository, IMapper mapper)
+    public CancelSaleHandler(
+        ISaleRepository saleRepository,
+        IMapper mapper,
+        IEventPublisher eventPublisher)
     {
         _saleRepository = saleRepository;
         _mapper = mapper;
+        _eventPublisher = eventPublisher;
     }
 
     public async Task<SaleResult> Handle(
@@ -25,6 +32,9 @@ public sealed class CancelSaleHandler : IRequestHandler<CancelSaleCommand, SaleR
 
         sale.Cancel();
         await _saleRepository.UpdateAsync(sale, cancellationToken);
+        await _eventPublisher.PublishAsync(
+            new SaleCancelledEvent(sale.Id, sale.SaleNumber, DateTime.UtcNow),
+            cancellationToken);
 
         return _mapper.Map<SaleResult>(sale);
     }
