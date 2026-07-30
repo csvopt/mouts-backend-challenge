@@ -40,7 +40,10 @@ public class Program
 
             builder.RegisterDependencies();
 
-            builder.Services.AddAutoMapper(typeof(Program).Assembly, typeof(ApplicationLayer).Assembly);
+            builder.Services.AddAutoMapper(
+                _ => { },
+                typeof(Program).Assembly,
+                typeof(ApplicationLayer).Assembly);
 
             builder.Services.AddMediatR(cfg =>
             {
@@ -53,7 +56,7 @@ public class Program
             builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
             var app = builder.Build();
-            app.UseMiddleware<ValidationExceptionMiddleware>();
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
 
             if (app.Environment.IsDevelopment())
             {
@@ -69,6 +72,15 @@ public class Program
             app.UseBasicHealthChecks();
 
             app.MapControllers();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var context = scope.ServiceProvider.GetRequiredService<DefaultContext>();
+                if (context.Database.IsRelational())
+                    context.Database.Migrate();
+                else
+                    context.Database.EnsureCreated();
+            }
 
             app.Run();
         }
